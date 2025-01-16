@@ -1,0 +1,32 @@
+{
+    "name": "eBPF Development",
+    "build": {
+        "dockerfile": "../Dockerfile",
+        "context": ".."
+    },
+    "runArgs": [
+        "--cap-add=SYS_PTRACE",
+        "--cap-add=SYS_ADMIN",
+        "--security-opt", "seccomp=unconfined",
+        "--privileged"
+    ],
+    "mounts": [
+        "source=/lib/modules,target=/lib/modules,type=bind,readonly",
+        "source=/usr/src,target=/usr/src,type=bind,readonly",
+        "source=/sys/kernel/debug,target=/sys/kernel/debug,type=bind"
+    ],
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-vscode.cpptools",
+                "golang.go",
+                "ms-vscode.makefile-tools"
+            ]
+        }
+    },
+    "remoteUser": "root",
+    "updateRemoteUserUID": true,
+    "postCreateCommand": "go mod download && make",
+    "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind",
+    "workspaceFolder": "/workspace"
+}

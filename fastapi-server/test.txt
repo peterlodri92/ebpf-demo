@@ -1,0 +1,2 @@
+This is a test file for the FastAPI server upload endpoint.
+It contains some sample text that will be uploaded and then downloaded.

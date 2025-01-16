@@ -1,0 +1,49 @@
+#!/bin/bash
+set -e
+
+# Function to cleanup processes on exit
+cleanup() {
+    echo "Cleaning up..."
+    if [ ! -z "$SERVER_PID" ]; then
+        kill $SERVER_PID 2>/dev/null || true
+    fi
+    docker rm -f tracer-container 2>/dev/null || true
+}
+
+trap cleanup EXIT
+
+# Start FastAPI server
+echo "Starting FastAPI server..."
+cd fastapi-server
+python3 main.py &
+SERVER_PID=$!
+
+# Wait for server to start
+sleep 2
+
+# Verify server is running
+if ! kill -0 $SERVER_PID 2>/dev/null; then
+    echo "Failed to start FastAPI server"
+    exit 1
+fi
+
+echo "FastAPI server running with PID: $SERVER_PID"
+
+# Build and run tracer container
+cd ../tracer
+echo "Building tracer container..."
+docker build -t ebpf-tracer .
+
+echo "Running tracer container..."
+docker run --rm \
+    --privileged \
+    --pid=host \
+    --name tracer-container \
+    -v /sys/kernel/debug:/sys/kernel/debug \
+    -v /sys/kernel/btf:/sys/kernel/btf \
+    -e TARGET_PID=$SERVER_PID \
+    ebpf-tracer
+
+# Wait for user input
+echo "Press Ctrl+C to stop..."
+wait $SERVER_PID
