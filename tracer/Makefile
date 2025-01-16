@@ -1,29 +1,24 @@
-ARCH := $(shell uname -m | sed 's/x86_64/x86/' | sed 's/aarch64/arm64/')
+.PHONY: all clean vmlinux build generate
+
 VMLINUX := vmlinux.h
-BPFTOOL ?= $(shell which bpftool)
 CLANG ?= clang
-CFLAGS := -g -O2 -Wall
-INCLUDES := -I$(shell pwd) \
-           -I/usr/include/bpf \
-           -I/usr/include \
-           -I/usr/src/linux-headers-$(shell uname -r) \
-           -I/usr/src/linux-headers-$(shell uname -r)/include \
-           -I/usr/src/linux-headers-$(shell uname -r)/arch/x86/include \
-           -I/usr/src/linux-headers-$(shell uname -r)/arch/x86/include/generated
+CFLAGS := -O2 -g -Wall
 
-.PHONY: all clean vmlinux build
+all: vmlinux generate build
 
-all: vmlinux build
+vmlinux:
+	bpftool btf dump file /sys/kernel/btf/vmlinux format c > $(VMLINUX)
+	cp $(VMLINUX) pkg/bpf/
 
-$(VMLINUX):
-	$(BPFTOOL) btf dump file /sys/kernel/btf/vmlinux format c > $(VMLINUX)
+generate: vmlinux
+	cd cmd/tracer && CGO_ENABLED=1 go generate
 
-build: $(VMLINUX)
-	CGO_ENABLED=1 go generate
-	CGO_ENABLED=1 go build -o tracer
+build: generate
+	cd cmd/tracer && CGO_ENABLED=1 go build -o ../../tracer
 
 clean:
 	rm -f $(VMLINUX)
+	rm -f pkg/bpf/$(VMLINUX)
 	rm -f tracer
-	rm -f bpf_*.go
+	rm -f cmd/tracer/bpf_*.go
 	rm -f *.o

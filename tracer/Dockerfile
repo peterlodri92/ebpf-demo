@@ -71,28 +71,37 @@ RUN git clone https://github.com/libbpf/libbpf.git \
 # Generate vmlinux.h
 RUN bpftool btf dump file /sys/kernel/btf/vmlinux format c > /usr/include/vmlinux.h
 
-# Create necessary directories with appropriate permissions
+# Create necessary directories
 RUN mkdir -p /sys/kernel/debug \
     && mkdir -p /sys/kernel/btf \
     && mkdir -p /kernel-headers \
     && chmod 755 /kernel-headers
 
-# Create workspace directory
+# Create workspace directory and project structure
 WORKDIR /workspace
+RUN mkdir -p cmd/tracer pkg/bpf
 
-# Copy source files
-COPY . .
+# Install bpf2go
+RUN go install github.com/cilium/ebpf/cmd/bpf2go@latest
+
+# Copy files maintaining the new structure
+COPY go.mod go.sum ./
+COPY Makefile entrypoint.sh ./
+COPY pkg/bpf/tracer.c pkg/bpf/tracer.h pkg/bpf/
+COPY cmd/tracer/main.go cmd/tracer/
+
+# Generate vmlinux.h before build
+RUN bpftool btf dump file /sys/kernel/btf/vmlinux format c > vmlinux.h && \
+    cp vmlinux.h pkg/bpf/
 
 # Build the tracer
-RUN go mod download && \
-    make
+RUN CGO_ENABLED=1 make
 
 # Add entrypoint script
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN chmod +x entrypoint.sh
 
 # Add PID argument
 ARG TARGET_PID
 ENV TARGET_PID=${TARGET_PID}
 
-ENTRYPOINT ["/entrypoint.sh"]
+ENTRYPOINT ["./entrypoint.sh"]

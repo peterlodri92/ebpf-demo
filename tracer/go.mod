@@ -1,6 +1,6 @@
-module ebpf-tracer
+module tracer
 
-go 1.23.4
+go 1.22
 
 require github.com/cilium/ebpf v0.17.1
 
