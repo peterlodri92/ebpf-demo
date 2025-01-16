@@ -90,13 +90,6 @@ COPY Makefile entrypoint.sh ./
 COPY pkg/bpf/tracer.c pkg/bpf/tracer.h pkg/bpf/
 COPY cmd/tracer/main.go cmd/tracer/
 
-# Generate vmlinux.h before build
-RUN bpftool btf dump file /sys/kernel/btf/vmlinux format c > vmlinux.h && \
-    cp vmlinux.h pkg/bpf/
-
-# Build the tracer
-RUN CGO_ENABLED=1 make
-
 # Add entrypoint script
 RUN chmod +x entrypoint.sh
 

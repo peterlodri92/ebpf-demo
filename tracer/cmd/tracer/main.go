@@ -34,10 +34,6 @@ func main() {
 		log.Fatal("Please specify a PID to trace with -pid")
 	}
 
-	if _, err := os.FindProcess(targetPid); err != nil {
-		log.Fatalf("Process %d not found: %v", targetPid, err)
-	}
-
 	if err := rlimit.RemoveMemlock(); err != nil {
 		log.Fatalf("Failed to remove rlimit: %v", err)
 	}

@@ -22,6 +22,14 @@ sysctl -w kernel.perf_event_paranoid=-1
 # Set kernel.kptr_restrict to 0 to allow reading kernel symbols
 sysctl -w kernel.kptr_restrict=0
 
+# Generate vmlinux.h from host kernel
+bpftool btf dump file /sys/kernel/btf/vmlinux format c > vmlinux.h
+cp vmlinux.h pkg/bpf/
+
+# Build the tracer with host's kernel headers
+make clean
+make
+
 # Update dynamic linker
 ldconfig
 
