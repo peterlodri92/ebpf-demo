@@ -30,6 +30,7 @@ RUN apt-get update && apt-get install -y \
     curl \
     wget \
     vim \
+    linux-libc-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Go
@@ -43,12 +44,16 @@ ENV GOPATH=/go
 ENV PATH=$PATH:$GOPATH/bin
 
 # Set up kernel headers and BPF includes
-RUN KERNEL_VERSION=$(uname -r) && \
-    ln -sf /usr/include/x86_64-linux-gnu/asm /usr/include/asm && \
-    ln -sf /usr/include/x86_64-linux-gnu/bits /usr/include/bits && \
+RUN mkdir -p /usr/include/linux && \
+    ln -sf /usr/include/asm-generic /usr/include/asm && \
+    ln -sf /usr/include/x86_64-linux-gnu/asm /usr/include/asm-x86 && \
     ln -sf /usr/include/x86_64-linux-gnu/sys /usr/include/sys && \
+    ln -sf /usr/include/x86_64-linux-gnu/bits /usr/include/bits && \
     ln -sf /usr/lib/x86_64-linux-gnu/libbpf.so /usr/lib/libbpf.so && \
-    ln -sf /usr/src/linux-headers-generic/include/uapi/linux/bpf* /usr/include/linux/
+    ln -sf /usr/include/x86_64-linux-gnu/bpf /usr/include/bpf && \
+    ln -sf /usr/include/x86_64-linux-gnu/linux/bpf.h /usr/include/linux/bpf.h && \
+    ln -sf /usr/include/x86_64-linux-gnu/linux/bpf_common.h /usr/include/linux/bpf_common.h && \
+    ln -sf /usr/include/x86_64-linux-gnu/linux/types.h /usr/include/linux/types.h
 
 # Install bpftool
 RUN git clone --recurse-submodules https://github.com/libbpf/bpftool.git \
@@ -56,12 +61,12 @@ RUN git clone --recurse-submodules https://github.com/libbpf/bpftool.git \
     && make \
     && make install
 
-# Install libbpf
+# Install libbpf and set up headers
 RUN git clone https://github.com/libbpf/libbpf.git \
     && cd libbpf/src \
     && make \
     && make install \
-    && ldconfig
+    && ldconfig 
 
 # Generate vmlinux.h
 RUN bpftool btf dump file /sys/kernel/btf/vmlinux format c > /usr/include/vmlinux.h

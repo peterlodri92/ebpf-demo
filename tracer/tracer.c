@@ -1,10 +1,50 @@
 // tracer.c
-#include <linux/types.h>
-#include <linux/bpf.h>
 #include "vmlinux.h"
-#include <bpf/bpf_helpers.h>
-#include <bpf/bpf_tracing.h>
-#include <bpf/bpf_core_read.h>
+
+typedef unsigned char __u8;
+typedef unsigned short __u16;
+typedef unsigned int __u32;
+typedef unsigned long long __u64;
+
+// Basic type definitions
+typedef unsigned int pid_t;
+
+// Tracepoint event structures
+struct trace_event_raw_sched_process_exec
+{
+    __u64 pad; // Placeholder to ensure proper alignment
+};
+
+struct trace_event_raw_sched_process_template
+{
+    __u64 pad; // Placeholder to ensure proper alignment
+};
+
+// Minimal task_struct definition with only the fields we need
+struct task_struct
+{
+    struct task_struct *real_parent;
+    pid_t tgid;
+};
+
+#define SEC(NAME) __attribute__((section(NAME), used))
+#define __uint(type, val) __attribute__((btf_decl_tag("type:" #type "=" #val)))
+#define __type(type, val) __attribute__((btf_decl_tag("type:" #type "=" #val)))
+
+#define BPF_F_CURRENT_CPU (-1)
+#define BPF_MAP_TYPE_PERF_EVENT_ARRAY 4
+#define BPF_MAP_TYPE_HASH 1
+
+#define BPF_CORE_READ(dst) \
+    ({ typeof(dst) val; bpf_probe_read(&val, sizeof(val), &dst); val; })
+
+static __u64 (*bpf_ktime_get_ns)(void) = (void *)5;
+static long (*bpf_get_current_comm)(char *buf, __u32 size_of_buf) = (void *)16;
+static void *(*bpf_get_current_task)(void) = (void *)35;
+static long (*bpf_perf_event_output)(void *ctx, void *map, __u64 flags, void *data, __u64 size) = (void *)25;
+static void *(*bpf_map_lookup_elem)(void *map, const void *key) = (void *)1;
+static __u64 (*bpf_get_current_pid_tgid)(void) = (void *)14;
+static long (*bpf_probe_read)(void *dst, __u32 size, const void *src) = (void *)4;
 
 char LICENSE[] SEC("license") = "GPL";
 
@@ -55,7 +95,9 @@ int trace_exec(struct trace_event_raw_sched_process_exec *ctx)
 
     // Get parent PID
     struct task_struct *task = (struct task_struct *)bpf_get_current_task();
-    e.ppid = BPF_CORE_READ(task, real_parent, tgid);
+    struct task_struct *parent;
+    bpf_probe_read(&parent, sizeof(parent), &task->real_parent);
+    bpf_probe_read(&e.ppid, sizeof(e.ppid), &parent->tgid);
 
     // Get process name
     bpf_get_current_comm(e.comm, sizeof(e.comm));
@@ -85,7 +127,9 @@ int trace_exit(struct trace_event_raw_sched_process_template *ctx)
 
     // Get parent PID
     struct task_struct *task = (struct task_struct *)bpf_get_current_task();
-    e.ppid = BPF_CORE_READ(task, real_parent, tgid);
+    struct task_struct *parent;
+    bpf_probe_read(&parent, sizeof(parent), &task->real_parent);
+    bpf_probe_read(&e.ppid, sizeof(e.ppid), &parent->tgid);
 
     // Get process name
     bpf_get_current_comm(e.comm, sizeof(e.comm));
