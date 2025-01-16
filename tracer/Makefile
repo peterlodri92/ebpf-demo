@@ -3,7 +3,13 @@ VMLINUX := vmlinux.h
 BPFTOOL ?= $(shell which bpftool)
 CLANG ?= clang
 CFLAGS := -g -O2 -Wall
-INCLUDES := -I$(shell pwd) -I/usr/include/bpf
+INCLUDES := -I$(shell pwd) \
+           -I/usr/include/bpf \
+           -I/usr/include \
+           -I/usr/src/linux-headers-$(shell uname -r) \
+           -I/usr/src/linux-headers-$(shell uname -r)/include \
+           -I/usr/src/linux-headers-$(shell uname -r)/arch/x86/include \
+           -I/usr/src/linux-headers-$(shell uname -r)/arch/x86/include/generated
 
 .PHONY: all clean vmlinux build
 
@@ -13,8 +19,8 @@ $(VMLINUX):
 	$(BPFTOOL) btf dump file /sys/kernel/btf/vmlinux format c > $(VMLINUX)
 
 build: $(VMLINUX)
-	go generate
-	go build -o tracer
+	CGO_ENABLED=1 go generate
+	CGO_ENABLED=1 go build -o tracer
 
 clean:
 	rm -f $(VMLINUX)

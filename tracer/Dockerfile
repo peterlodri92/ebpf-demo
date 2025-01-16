@@ -24,6 +24,7 @@ RUN apt-get update && apt-get install -y \
     linux-headers-generic \
     linux-tools-generic \
     linux-tools-common \
+    libbpf-dev \
     gdb \
     strace \
     curl \
@@ -40,6 +41,14 @@ RUN curl -OL https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz \
 ENV PATH=$PATH:/usr/local/go/bin
 ENV GOPATH=/go
 ENV PATH=$PATH:$GOPATH/bin
+
+# Set up kernel headers and BPF includes
+RUN KERNEL_VERSION=$(uname -r) && \
+    ln -sf /usr/include/x86_64-linux-gnu/asm /usr/include/asm && \
+    ln -sf /usr/include/x86_64-linux-gnu/bits /usr/include/bits && \
+    ln -sf /usr/include/x86_64-linux-gnu/sys /usr/include/sys && \
+    ln -sf /usr/lib/x86_64-linux-gnu/libbpf.so /usr/lib/libbpf.so && \
+    ln -sf /usr/src/linux-headers-generic/include/uapi/linux/bpf* /usr/include/linux/
 
 # Install bpftool
 RUN git clone --recurse-submodules https://github.com/libbpf/bpftool.git \
