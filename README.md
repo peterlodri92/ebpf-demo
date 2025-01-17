@@ -4,6 +4,28 @@ A hands-on project that combines FastAPI (Python) for a simple User + File CRUD 
 
 Both services run in Docker containers, orchestrated by docker-compose. This setup showcases how to trace syscalls in real time from the FastAPI container using eBPF.
 
+## Table of Contents
+- [✨ Features](#-features)
+- [📁 Project Structure](#-project-structure)
+- [🚀 Getting Started](#-getting-started)
+  - [1. Clone the Repo](#1-clone-the-repo)
+  - [2. Build & Run with Docker Compose](#2-build--run-with-docker-compose)
+  - [3. Test the API](#3-test-the-api)
+  - [Quick Testing](#quick-testing)
+- [📝 eBPF Tracer Overview](#-ebpf-tracer-overview)
+- [🐳 Docker Compose Notes](#-docker-compose-notes)
+- [🛠 Troubleshooting](#-troubleshooting)
+- [🏁 Wrap-up](#-wrap-up)
+- [📄 License](#-license)
+
+_____
+
+<p align="center">
+  <img src="./flow-chart.png" width="30%" height="30%" alt="System Flow Diagram">
+</p>
+
+_____
+
 ## ✨ Features
 
 * **FastAPI container:**
@@ -145,12 +167,4 @@ services:
 This demo shows how to:
 * Spin up a FastAPI app with Docker
 * Attach an eBPF tracer to the syscalls made by that app
-* Observe PID, PPID, and other metadata in real time!
-
-We hope this helps you understand eBPF + Docker synergy for syscalls tracing. Feel free to open issues or submit PRs to enhance the project. Have fun debugging syscalls! 🚀
-
-## 📄 License
-
-This project is licensed under the MIT License.
-
-Enjoy eBPF tracing ☕✨
+* Observe P
