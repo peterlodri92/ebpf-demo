@@ -49,11 +49,11 @@ func main() {
 		}
 	}
 
-	kp, err := link.Kprobe("__x64_sys_enter", objs.HandleSysEnter, nil)
+	tp, err := link.Tracepoint("raw_syscalls", "sys_enter", objs.HandleSysEnter, nil)
 	if err != nil {
-		log.Fatalf("Opening kprobe: %v", err)
+		log.Fatalf("Opening tracepoint: %v", err)
 	}
-	defer kp.Close()
+	defer tp.Close()
 
 	rd, err := perf.NewReader(objs.Events, os.Getpagesize())
 	if err != nil {

@@ -6,8 +6,15 @@ char LICENSE[] SEC("license") = "GPL";
 BPF_MAP(events, BPF_MAP_TYPE_PERF_EVENT_ARRAY, int, __u32, 1024);
 BPF_MAP(target_pid_map, BPF_MAP_TYPE_HASH, __u32, __u32, 1);
 
-SEC("kprobe/sys_enter")
-int handle_sys_enter(struct pt_regs *ctx)
+struct syscall_enter_args
+{
+    __u64 pad;
+    long id;
+    unsigned long args[6];
+};
+
+SEC("tracepoint/raw_syscalls/sys_enter")
+int handle_sys_enter(struct syscall_enter_args *ctx)
 {
     __u64 pid_tgid = bpf_get_current_pid_tgid();
     __u32 pid = pid_tgid >> 32;
@@ -37,8 +44,8 @@ int handle_sys_enter(struct pt_regs *ctx)
         return 0;
     }
 
-    // Read syscall number from registers
-    e.syscall_id = PT_REGS_SYSCALL_NR(ctx);
+    // Get syscall ID directly from tracepoint context
+    e.syscall_id = ctx->id;
 
     bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &e, sizeof(e));
     return 0;

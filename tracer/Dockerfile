@@ -90,6 +90,12 @@ COPY Makefile entrypoint.sh ./
 COPY pkg/bpf/tracer.c pkg/bpf/tracer.h pkg/bpf/
 COPY cmd/tracer/main.go cmd/tracer/
 
+# Build the tracer
+RUN make clean && make
+
+# Copy the built binary to root
+RUN cp tracer /tracer
+
 # Add entrypoint script
 RUN chmod +x entrypoint.sh
 

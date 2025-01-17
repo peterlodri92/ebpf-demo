@@ -45,49 +45,17 @@ else
     fi
 fi
 
-# Verify mounts and permissions
-echo "Verifying mounts and permissions..."
-echo "debugfs mount:"
-mount | grep debugfs
-ls -la /sys/kernel/debug
-echo
-echo "tracefs mount:"
-mount | grep tracefs
-ls -la /sys/kernel/tracing
-echo
-echo "bpf mount:"
-mount | grep bpf
-ls -la /sys/fs/bpf
-echo
-echo "Checking tracing directory:"
-ls -la /sys/kernel/tracing/events/sched/
-
-# Set kernel.perf_event_paranoid to -1 to allow perf monitoring
-sysctl -w kernel.perf_event_paranoid=-1
-
-# Set kernel.kptr_restrict to 0 to allow reading kernel symbols
-sysctl -w kernel.kptr_restrict=0
-
-# Generate vmlinux.h from host kernel
-echo "Generating vmlinux.h..."
-bpftool btf dump file /sys/kernel/btf/vmlinux format c > vmlinux.h || \
-  { echo "bpftool failed"; exit 1; }
-cp vmlinux.h pkg/bpf/
-
-# Build the tracer with host's kernel headers
-make clean
-echo "Running make..."
-make || { echo "make failed"; exit 1; }
-
-# Update dynamic linker
-ldconfig
+# Set kernel parameters
+echo "Setting kernel parameters..."
+sysctl -w kernel.perf_event_paranoid=-1 || true
+sysctl -w kernel.kptr_restrict=0 || true
 
 if [ -n "$TRACE_PID" ]; then
   echo "Starting tracer with PID $TRACE_PID..."
-  exec ./tracer --pid=$TRACE_PID || { echo "./tracer exited with error"; exit 1; }
+  exec /tracer --pid=$TRACE_PID
 else
   echo "Starting tracer without specific PID filter..."
-  exec ./tracer || { echo "./tracer exited with error"; exit 1; }
+  exec /tracer
 fi
 
 
