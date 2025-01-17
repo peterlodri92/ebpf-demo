@@ -11,11 +11,6 @@ int trace_exec(void *ctx)
 {
     __u64 pid_tgid = bpf_get_current_pid_tgid();
     __u32 pid = pid_tgid >> 32;
-    __u32 key = 0;
-
-    __u32 *target_pid = bpf_map_lookup_elem(&target_pid_map, &key);
-    if (!target_pid || *target_pid != pid)
-        return 0;
 
     struct event e = {};
     e.pid = pid;
@@ -33,6 +28,12 @@ int trace_exec(void *ctx)
         return 0;
 
     bpf_get_current_comm(e.comm, sizeof(e.comm));
+
+    // Only emit events for python processes
+    if (e.comm[0] != 'p' && e.comm[0] != 'u') // python/python3 or uvicorn
+        return 0;
+    if (e.comm[1] != 'y' && e.comm[1] != 'v') // python/python3 or uvicorn
+        return 0;
 
     bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &e, sizeof(e));
     return 0;
@@ -45,10 +46,6 @@ int trace_exit(void *ctx)
     __u32 pid = pid_tgid >> 32;
     __u32 key = 0;
 
-    __u32 *target_pid = bpf_map_lookup_elem(&target_pid_map, &key);
-    if (!target_pid || *target_pid != pid)
-        return 0;
-
     struct event e = {};
     e.pid = pid;
     e.timestamp = bpf_ktime_get_ns();
@@ -65,6 +62,13 @@ int trace_exit(void *ctx)
         return 0;
 
     bpf_get_current_comm(e.comm, sizeof(e.comm));
+
+    // Only emit events for python processes
+    if (e.comm[0] != 'p' && e.comm[0] != 'u') // python/python3 or uvicorn
+        return 0;
+    if (e.comm[1] != 'y' && e.comm[1] != 'v') // python/python3 or uvicorn
+        return 0;
+
     bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &e, sizeof(e));
     return 0;
 }

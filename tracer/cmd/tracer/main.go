@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"encoding/binary"
-	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -26,14 +25,6 @@ type Event struct {
 }
 
 func main() {
-	var targetPid int
-	flag.IntVar(&targetPid, "pid", 0, "Process ID to trace")
-	flag.Parse()
-
-	if targetPid == 0 {
-		log.Fatal("Please specify a PID to trace with -pid")
-	}
-
 	if err := rlimit.RemoveMemlock(); err != nil {
 		log.Fatalf("Failed to remove rlimit: %v", err)
 	}
@@ -43,10 +34,6 @@ func main() {
 		log.Fatalf("Loading objects: %v", err)
 	}
 	defer objs.Close()
-
-	if err := objs.TargetPidMap.Put(uint32(0), uint32(targetPid)); err != nil {
-		log.Fatalf("Failed to set target PID: %v", err)
-	}
 
 	execTP, err := link.Tracepoint("sched", "sched_process_exec", objs.TraceExec, nil)
 	if err != nil {
@@ -69,7 +56,7 @@ func main() {
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 
-	fmt.Printf("Tracing PID %d... Hit Ctrl-C to end.\n", targetPid)
+	fmt.Println("Tracing all processes... Hit Ctrl-C to end.")
 
 	go func() {
 		var event Event

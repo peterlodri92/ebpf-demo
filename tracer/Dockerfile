@@ -93,8 +93,4 @@ COPY cmd/tracer/main.go cmd/tracer/
 # Add entrypoint script
 RUN chmod +x entrypoint.sh
 
-# Add PID argument
-ARG TARGET_PID
-ENV TARGET_PID=${TARGET_PID}
-
 ENTRYPOINT ["./entrypoint.sh"]
