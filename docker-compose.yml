@@ -1,0 +1,24 @@
+services:
+  fastapi:
+    build: 
+      context: ./fastapi-server
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./fastapi-server:/app
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  tracer:
+    build: 
+      context: ./tracer
+      dockerfile: Dockerfile
+    privileged: true
+    pid: "host"
+    network_mode: "service:fastapi"
+    volumes:
+      - /sys/kernel/debug:/sys/kernel/debug
+      - /sys/kernel/tracing:/sys/kernel/tracing
+      - /sys/fs/bpf:/sys/fs/bpf
+    depends_on:
+      - fastapi

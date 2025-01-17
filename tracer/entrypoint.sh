@@ -3,32 +3,27 @@ set -e
 
 echo "Mounting filesystems..."
 
+# Create mount points if they don't exist
+mkdir -p /sys/kernel/debug
+mkdir -p /sys/kernel/tracing
+
 # Mount debugfs
-if mountpoint -q /sys/kernel/debug; then
-    echo "debugfs is already mounted"
-else
-    echo "Mounting debugfs..."
-    mount -t debugfs none /sys/kernel/debug
-    if [ $? -eq 0 ]; then
-        echo "debugfs mounted successfully"
-    else
-        echo "Failed to mount debugfs"
-        exit 1
-    fi
-fi
+echo "Mounting debugfs..."
+mount -t debugfs none /sys/kernel/debug || true
 
 # Mount tracefs
-if mountpoint -q /sys/kernel/tracing; then
-    echo "tracefs is already mounted"
-else
-    echo "Mounting tracefs..."
-    mount -t tracefs none /sys/kernel/tracing
-    if [ $? -eq 0 ]; then
-        echo "tracefs mounted successfully"
-    else
-        echo "Failed to mount tracefs"
-        exit 1
-    fi
+echo "Mounting tracefs..."
+mount -t tracefs none /sys/kernel/tracing || true
+
+# Verify mounts
+if ! mountpoint -q /sys/kernel/debug; then
+    echo "Failed to mount debugfs"
+    exit 1
+fi
+
+if ! mountpoint -q /sys/kernel/tracing; then
+    echo "Failed to mount tracefs"
+    exit 1
 fi
 
 # Mount bpf filesystem
@@ -50,12 +45,16 @@ echo "Setting kernel parameters..."
 sysctl -w kernel.perf_event_paranoid=-1 || true
 sysctl -w kernel.kptr_restrict=0 || true
 
-if [ -n "$TRACE_PID" ]; then
-  echo "Starting tracer with PID $TRACE_PID..."
-  exec /tracer --pid=$TRACE_PID
+# Wait for FastAPI to start and get its PID
+echo "Waiting for FastAPI to start..."
+sleep 5
+FASTAPI_PID=$(ps aux | grep "[u]vicorn" | awk '{print $2}')
+if [ -n "$FASTAPI_PID" ]; then
+  echo "Found FastAPI PID: $FASTAPI_PID"
+  /tracer --pid=$FASTAPI_PID
 else
-  echo "Starting tracer without specific PID filter..."
-  exec /tracer
+  echo "Could not find FastAPI process"
+  exit 1
 fi
 
 

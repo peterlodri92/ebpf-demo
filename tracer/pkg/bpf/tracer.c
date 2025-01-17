@@ -36,17 +36,26 @@ int handle_sys_enter(struct syscall_enter_args *ctx)
 
     bpf_get_current_comm(e.comm, sizeof(e.comm));
 
-    // Check if we should filter by PID
-    __u32 key = 0;
-    __u32 *target_pid = bpf_map_lookup_elem(&target_pid_map, &key);
-    if (target_pid && *target_pid != pid)
-    {
-        return 0;
-    }
-
     // Get syscall ID directly from tracepoint context
     e.syscall_id = ctx->id;
 
-    bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &e, sizeof(e));
+    // Check if we should filter by PID
+    __u32 key = 0;
+    __u32 *target_pid = bpf_map_lookup_elem(&target_pid_map, &key);
+
+    // Output first event from any process for debugging
+    static __u32 first_event = 0;
+    if (!first_event)
+    {
+        first_event = 1;
+        bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &e, sizeof(e));
+        return 0;
+    }
+
+    // Only output events from target PID
+    if (target_pid && *target_pid == pid)
+    {
+        bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &e, sizeof(e));
+    }
     return 0;
 }
