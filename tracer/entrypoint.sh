@@ -82,7 +82,13 @@ make || { echo "make failed"; exit 1; }
 # Update dynamic linker
 ldconfig
 
-echo "About to run ./tracer..."
-./tracer || { echo "./tracer exited with error"; exit 1; }
+if [ -n "$TRACE_PID" ]; then
+  echo "Starting tracer with PID $TRACE_PID..."
+  exec ./tracer --pid=$TRACE_PID || { echo "./tracer exited with error"; exit 1; }
+else
+  echo "Starting tracer without specific PID filter..."
+  exec ./tracer || { echo "./tracer exited with error"; exit 1; }
+fi
+
 
 echo "If we got here, tracer ended by itself"

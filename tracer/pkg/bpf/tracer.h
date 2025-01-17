@@ -26,6 +26,7 @@ struct event
     __u32 pid;
     __u32 ppid;
     __u64 timestamp;
+    __u64 syscall_id;
     char comm[16];
 };
 

@@ -62,3 +62,13 @@ docker run --privileged \
 kernel.perf_event_paranoid = -1
 kernel.kptr_restrict = 0
 Error: Process 79696 not found in host namespace
+
+
+
+docker run --privileged --pid=host \
+  -v /sys/kernel/debug:/sys/kernel/debug \
+  -v /sys/kernel/tracing:/sys/kernel/tracing \
+  -v /sys/fs/bpf:/sys/fs/bpf \
+  -v /proc:/proc \
+  -e TRACE_PID=<PID_OF_FASTAPI> \
+  ebpf-tracer

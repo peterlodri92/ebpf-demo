@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/binary"
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -21,31 +22,38 @@ type Event struct {
 	PID       uint32
 	PPID      uint32
 	Timestamp uint64
+	SyscallID uint64
 	Comm      [16]byte
 }
 
 func main() {
+	var targetPID int
+	flag.IntVar(&targetPID, "pid", 0, "Target PID to trace (0 for all processes)")
+	flag.Parse()
+
 	if err := rlimit.RemoveMemlock(); err != nil {
 		log.Fatalf("Failed to remove rlimit: %v", err)
 	}
 
-	objs := bpfObjects{}
+	var objs bpfObjects
 	if err := loadBpfObjects(&objs, nil); err != nil {
 		log.Fatalf("Loading objects: %v", err)
 	}
 	defer objs.Close()
 
-	execTP, err := link.Tracepoint("sched", "sched_process_exec", objs.TraceExec, nil)
-	if err != nil {
-		log.Fatalf("Opening exec tracepoint: %v", err)
+	// If PID is specified, update the target PID map
+	if targetPID > 0 {
+		fmt.Printf("Tracing PID: %d\n", targetPID)
+		if err := objs.TargetPidMap.Put(uint32(0), uint32(targetPID)); err != nil {
+			log.Fatalf("Failed to update target PID map: %v", err)
+		}
 	}
-	defer execTP.Close()
 
-	exitTP, err := link.Tracepoint("sched", "sched_process_exit", objs.TraceExit, nil)
+	kp, err := link.Kprobe("__x64_sys_enter", objs.HandleSysEnter, nil)
 	if err != nil {
-		log.Fatalf("Opening exit tracepoint: %v", err)
+		log.Fatalf("Opening kprobe: %v", err)
 	}
-	defer exitTP.Close()
+	defer kp.Close()
 
 	rd, err := perf.NewReader(objs.Events, os.Getpagesize())
 	if err != nil {
@@ -90,11 +98,12 @@ func main() {
 				comm = append(comm, b)
 			}
 
-			fmt.Printf("[%s] PID: %d, PPID: %d, Command: %s\n",
+			fmt.Printf("[%s] PID: %d, PPID: %d, Command: %s, Syscall: %d\n",
 				timestamp.Format(time.RFC3339),
 				event.PID,
 				event.PPID,
 				string(comm),
+				event.SyscallID,
 			)
 		}
 	}()
