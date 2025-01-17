@@ -70,5 +70,5 @@ docker run --privileged --pid=host \
   -v /sys/kernel/tracing:/sys/kernel/tracing \
   -v /sys/fs/bpf:/sys/fs/bpf \
   -v /proc:/proc \
-  -e TRACE_PID=<PID_OF_FASTAPI> \
+  -e TRACE_PID=19299 \
   ebpf-tracer
